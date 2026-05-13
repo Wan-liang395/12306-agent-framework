@@ -16,6 +16,7 @@
         <module>ticket-service</module>
         <module>order-service</module>
         <module>pay-service</module>
+        <module>agent-service</module>
     </modules>
 
     <artifactId>services</artifactId>
