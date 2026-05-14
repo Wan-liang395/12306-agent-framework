@@ -1,0 +1,82 @@
+server:
+  port: 9006
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+spring:
+  application: train12306-agent${unique-name:}-service
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: 3354054116
+    url: jdbc:mysql://127.0.0.1:3306/12306_ticket?characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&serverTimezone=GMT%2B8
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      password: 3354054116
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+        username: nacos
+        password: nacos
+      config:
+        server-addr: ${spring.cloud.nacos.discovery.server-addr}
+        import-check:
+          enabled: false
+        username: nacos
+        password: nacos
+      sentinel:
+        transport:
+          dashboard: localhost:8686
+          port: 8719
+  ai:
+    dashscope:
+      api-key: sk-c6f82763fbc04cffa0274ce954423ca3
+      chat:
+        options:
+          connect-timeout: 60000
+          read-timeout: 60000
+      retry:
+        max-attempts: 3
+        backoff:
+          initial-interval: 2000
+          multiplier: 2
+          max-interval: 10000
+
+    # Spring AI MCP 客户端配置 (完整保留，用于对接你之前的能力)
+    mcp:
+      client:
+        enabled: true
+        name: tencent-mcp-server
+        version: 1.0.0
+        request-timeout: 60s
+        type: ASYNC
+        sse:
+          connections:
+            tencent-cls:
+              url: https://mcp-api.tencent-cloud.com
+              sse-endpoint: /sse/0defe5b60264a380
+# 阿里云 DashScope Embedding API 配置
+dashscope:
+  api:
+     key: sk-c6f82763fbc04cffa0274ce954423ca3
+  embedding:
+     model: text-embedding-v4  # 阿里云文本向量化模型
+# ===================================================================
+# 下面是你原有的 RAG 和业务配置，我们先暂时注释或简化保留
+# 等你打通了“查票、买票”核心流程，如果还需要知识库问答，再把它们打开
+# ===================================================================
+
+# RAG 配置 (简化保留，用于你代码里的实体类反序列化)
+rag:
+  top-k: 3
+  model: "qwen3-max"  # 建议查票这种需要强逻辑和 Function Calling 的场景，使用 qwen-max
+
+# document: ... (暂且不用)
+# milvus: ... (暂且不用，等需要知识库检索时再配置)
+# prometheus: ... (暂且不用)
+# cls: ... (暂且不用)
