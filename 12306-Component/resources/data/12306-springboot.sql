@@ -1,31 +1,22 @@
-USE
-12306_ticket;
+INSERT INTO `t_passenger_15` (`id`, `username`, `real_name`, `id_type`, `id_card`, `discount_type`, `phone`,
+                              `create_date`, `verify_status`, `create_time`, `update_time`, `del_flag`)
+VALUES (1683029289099362304, 'admin', '万重山', 0, '7XT4j1iCfK8DeSiZeJs1M00oDOG/KxdBXKR34j5YLZc=', 0,
+        'MZObk+5TeYPLHtP2A6+aiw==', '2026-07-23 16:20:26', 0, '2026-07-23 16:20:26', '2026-07-23 16:20:26', 0),
+       (1683029597561061376, 'admin', '金来', 0, 'R0L4oYtT1xHe04P4h9qmZycS0T45NS7WO6J58AqzJgs=', 0,
+        'RPKP/q6lpWsY06C178ARjA==', '2026-07-23 16:21:40', 0, '2026-07-23 16:21:40', '2026-07-23 16:21:40', 0);
 
-INSERT INTO `t_station` (`id`, `code`, `name`, `spell`, `region`, `region_name`, `create_time`, `update_time`,
-                         `del_flag`)
-VALUES (1, 'VNP', '北京南', 'beijingnan', 'BJP', '北京', '2026-06-01 20:54:00', '2026-06-01 20:54:00', 0),
-       (2, 'JGK', '济南西', 'jinanxi', 'JNK', '济南', '2026-06-01 20:54:00', '2026-06-01 20:54:00', 0),
-       (3, 'NKH', '南京南', 'nanjingnan', 'NJH', '南京', '2026-06-01 20:54:00', '2026-06-01 20:54:00', 0),
-       (4, 'HGH', '杭州东', 'hangzhoudong', 'HZH', '杭州', '2026-06-01 20:54:00', '2026-06-01 20:54:00', 0),
-       (5, 'NGH', '宁波', 'ningbo', 'NGH', '宁波', '2026-06-01 20:54:00', '2026-06-01 20:54:00', 0),
-       (6, 'BJP', '北京', 'beijing', 'BJP', '北京', '2026-06-01 20:54:00', '2026-06-01 20:54:00', 0),
-       (7, 'DZP', '德州', 'dezhou', 'DZP', '德州', '2026-06-01 20:54:00', '2026-06-01 20:54:00', 0),
-       (8, 'NJH', '南京', 'nanjing', 'NJH', '南京', '2026-06-01 20:54:00', '2026-06-01 20:54:00', 0),
-       (9, 'JXH', '嘉兴', 'jiaxing', 'JXH', '嘉兴', '2026-06-01 20:54:00', '2026-06-01 20:54:00', 0),
-       (10, 'HNH', '海宁', 'haining', 'HNH', '海宁', '2026-06-01 20:54:00', '2026-06-01 20:54:00', 0),
-       (11, 'HZH', '杭州', 'hangzhou', 'HZH', '杭州', '2026-06-01 20:54:00', '2026-06-01 20:54:00', 0);
+INSERT INTO `t_user_15` (`id`, `username`, `password`, `real_name`, `region`, `id_type`, `id_card`, `phone`,
+                         `telephone`, `mail`, `user_type`, `verify_status`, `post_code`, `address`, `deletion_time`,
+                         `create_time`, `update_time`, `del_flag`)
+VALUES (1683025552364568576, 'admin', 'admin123456', '徐万里', '0', 0, 'r1yuubeRZATLkpBLkPT33CNry/L2FXqTDGTfW00JqPk=',
+        'yKZz0xLyjNb9LSCOCfJD4w==', NULL, 'i00jYS6pbWVtSXB4iAMuJ9vd6cnZ4rz4qKBAXQ9C9oU=', 0, 0, NULL, NULL, 0,
+        '2026-07-23 16:05:35', '2026-07-23 16:05:35', 0);
 
-INSERT INTO `t_train` (`id`, `train_number`, `train_type`, `train_tag`, `train_brand`, `start_station`, `end_station`,
-                       `start_region`, `end_region`, `sale_time`, `sale_status`, `departure_time`, `arrival_time`,
-                       `create_time`, `update_time`, `del_flag`)
-VALUES (1, 'G35', 0, '0,1,2', '0,6', '北京南', '宁波', '北京', '宁波', '2026-05-15 14:30:00', 0, '2026-06-01 09:56:00',
-        '2026-06-01 15:14:00', '2026-06-01 20:45:00', '2026-06-01 20:45:00', 0),
-       (2, 'G39', 0, '0,3', '1,6', '北京南', '杭州东', '北京', '杭州', '2026-05-15 14:30:00', 0, '2026-06-01 19:04:00',
-        '2026-06-01 23:22:00', '2026-06-01 20:45:00', '2026-06-01 20:45:00', 0),
-       (3, 'D717', 1, '0', '6', '北京', '杭州', '北京', '杭州', '2026-05-15 14:30:00', 0, '2026-06-01 19:16:00',
-        '2026-06-02 09:00:00', '2026-06-01 20:45:00', '2026-06-01 20:45:00', 0),
-       (4, 'Z284', 2, '0', '6', '北京', '杭州', '北京', '杭州', '2026-05-15 14:30:00', 0, '2026-06-01 18:56:00',
-        '2026-06-02 10:57:00', '2026-06-01 20:45:00', '2026-06-01 20:45:00', 0);
+INSERT INTO `t_user_mail_14` (`id`, `username`, `mail`, `deletion_time`, `create_time`, `update_time`, `del_flag`)
+VALUES (1683025552452648960, 'admin', 'machen@apache.org', 0, '2026-07-23 16:05:35', '2026-07-23 16:05:35', 0);
+
+INSERT INTO `t_user_phone_1` (`id`, `username`, `phone`, `deletion_time`, `create_time`, `update_time`, `del_flag`)
+VALUES (1683025552431677440, 'admin', '15601166692', 0, '2026-07-23 16:05:35', '2026-07-23 16:05:35', 0);
 
 INSERT INTO `t_carriage` (`id`, `train_id`, `carriage_number`, `carriage_type`, `seat_count`, `create_time`,
                           `update_time`, `del_flag`)
@@ -104,6 +95,32 @@ VALUES (1, '北京', '北京市', 'BJP', 'B', 'beijing', 1, '2026-06-01 20:50:00
        (6, '天津', '天津市', 'TJP', 'T', 'tianjing', 1, '2026-06-01 20:50:00', '2026-06-01 20:50:00', 0),
        (7, '嘉兴', '嘉兴市', 'JXH', 'J', 'jiaxing', 0, '2026-06-01 20:50:00', '2026-06-01 20:50:00', 0),
        (8, '海宁', '海宁市', 'HNH', 'H', 'haining', 0, '2026-06-01 20:50:00', '2026-06-01 20:50:00', 0);
+
+INSERT INTO `t_station` (`id`, `code`, `name`, `spell`, `region`, `region_name`, `create_time`, `update_time`,
+                         `del_flag`)
+VALUES (1, 'VNP', '北京南', 'beijingnan', 'BJP', '北京', '2026-06-01 20:54:00', '2026-06-01 20:54:00', 0),
+       (2, 'JGK', '济南西', 'jinanxi', 'JNK', '济南', '2026-06-01 20:54:00', '2026-06-01 20:54:00', 0),
+       (3, 'NKH', '南京南', 'nanjingnan', 'NJH', '南京', '2026-06-01 20:54:00', '2026-06-01 20:54:00', 0),
+       (4, 'HGH', '杭州东', 'hangzhoudong', 'HZH', '杭州', '2026-06-01 20:54:00', '2026-06-01 20:54:00', 0),
+       (5, 'NGH', '宁波', 'ningbo', 'NGH', '宁波', '2026-06-01 20:54:00', '2026-06-01 20:54:00', 0),
+       (6, 'BJP', '北京', 'beijing', 'BJP', '北京', '2026-06-01 20:54:00', '2026-06-01 20:54:00', 0),
+       (7, 'DZP', '德州', 'dezhou', 'DZP', '德州', '2026-06-01 20:54:00', '2026-06-01 20:54:00', 0),
+       (8, 'NJH', '南京', 'nanjing', 'NJH', '南京', '2026-06-01 20:54:00', '2026-06-01 20:54:00', 0),
+       (9, 'JXH', '嘉兴', 'jiaxing', 'JXH', '嘉兴', '2026-06-01 20:54:00', '2026-06-01 20:54:00', 0),
+       (10, 'HNH', '海宁', 'haining', 'HNH', '海宁', '2026-06-01 20:54:00', '2026-06-01 20:54:00', 0),
+       (11, 'HZH', '杭州', 'hangzhou', 'HZH', '杭州', '2026-06-01 20:54:00', '2026-06-01 20:54:00', 0);
+
+INSERT INTO `t_train` (`id`, `train_number`, `train_type`, `train_tag`, `train_brand`, `start_station`, `end_station`,
+                       `start_region`, `end_region`, `sale_time`, `sale_status`, `departure_time`, `arrival_time`,
+                       `create_time`, `update_time`, `del_flag`)
+VALUES (1, 'G35', 0, '0,1,2', '0,6', '北京南', '宁波', '北京', '宁波', '2026-05-15 14:30:00', 0, '2026-06-01 09:56:00',
+        '2026-06-01 15:14:00', '2026-06-01 20:45:00', '2026-06-01 20:45:00', 0),
+       (2, 'G39', 0, '0,3', '1,6', '北京南', '杭州东', '北京', '杭州', '2026-05-15 14:30:00', 0, '2026-06-01 19:04:00',
+        '2026-06-01 23:22:00', '2026-06-01 20:45:00', '2026-06-01 20:45:00', 0),
+       (3, 'D717', 1, '0', '6', '北京', '杭州', '北京', '杭州', '2026-05-15 14:30:00', 0, '2026-06-01 19:16:00',
+        '2026-06-02 09:00:00', '2026-06-01 20:45:00', '2026-06-01 20:45:00', 0),
+       (4, 'Z284', 2, '0', '6', '北京', '杭州', '北京', '杭州', '2026-05-15 14:30:00', 0, '2026-06-01 18:56:00',
+        '2026-06-02 10:57:00', '2026-06-01 20:45:00', '2026-06-01 20:45:00', 0);
 
 INSERT INTO `t_train_station` (`id`, `train_id`, `station_id`, `sequence`, `departure`, `arrival`, `start_region`,
                                `end_region`, `arrival_time`, `departure_time`, `stopover_time`, `create_time`,
