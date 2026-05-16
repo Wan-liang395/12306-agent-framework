@@ -3,6 +3,8 @@ package com.grace.train12306.biz.agentservice.remote;
 import com.grace.train12306.framework.starter.convention.result.Result;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
@@ -25,4 +27,9 @@ public interface TicketFeignClient {
      */
     @GetMapping("/api/ticket-service/station/all")
     Result<List<Map<String, Object>>>  listAllStations();
+    /**
+     * 对应 ticket-service 的购票/下单接口
+     */
+    @PostMapping("/api/ticket-service/ticket/purchase")
+    Result<Object> purchaseTicket(@RequestBody Map<String, Object> requestParam);
 }
