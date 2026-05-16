@@ -30,16 +30,31 @@ public class TicketAgentTool {
                 JSONObject raw = JSON.parseObject(JSON.toJSONString(result.getData()));
                 JSONArray trains = raw.getJSONArray("trainList");
 
-                // 2. 压缩：只保留大模型关注的核心 4 个字段，展示前 10 趟
+                // 2. 压缩:只保留大模型关注的核心 4 个字段，展示前 10 趟
+                // 防呆格式化：显式提供到达时间，并将历时转换为可读文本
                 JSONArray slimList = new JSONArray();
                 int showCount = Math.min(trains.size(), 10);
                 for (int i = 0; i < showCount; i++) {
                     JSONObject t = trains.getJSONObject(i);
                     JSONObject s = new JSONObject();
-                    s.put("T", t.getString("trainNumber"));   // 车次
-                    s.put("S", t.getString("departureTime")); // 出发
-                    s.put("D", t.getString("duration"));      // 历时
-                    s.put("P", t.getJSONArray("seatClassList")); // 价格/余票
+                    s.put("车次", t.getString("trainNumber"));   // 车次
+                    s.put("出发时间", t.getString("departureTime")); // 出发
+                    s.put("到达时间", t.getString("arrivalTime")); // 到达
+                    // 👉 核心修复：把 "06:25" 强制转换成 "6小时25分钟"，防止大模型误认
+                    String rawDuration = t.getString("duration");
+                    if (rawDuration != null && rawDuration.contains(":")) {
+                        String[] parts = rawDuration.split(":");
+                        try {
+                            int hours = Integer.parseInt(parts[0]);
+                            int minutes = Integer.parseInt(parts[1]);
+                            s.put("历时", hours + "小时" + minutes + "分钟");
+                        } catch (NumberFormatException e) {
+                            s.put("历时", rawDuration);
+                        }
+                    } else {
+                        s.put("历时", rawDuration);
+                    }
+                    s.put("余票信息", t.getJSONArray("seatClassList"));
                     slimList.add(s);
                 }
 

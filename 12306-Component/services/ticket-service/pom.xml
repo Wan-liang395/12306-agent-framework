@@ -34,11 +34,11 @@
             <version>${project.version}</version>
         </dependency>
 
-        <dependency>
+      <!--  <dependency>
             <groupId>com.grace.train12306</groupId>
             <artifactId>train12306-user-spring-boot-starter</artifactId>
             <version>${project.version}</version>
-        </dependency>
+        </dependency>-->
 
         <dependency>
             <groupId>com.grace.train12306</groupId>
@@ -46,11 +46,11 @@
             <version>${project.version}</version>
         </dependency>
 
-        <dependency>
+ <!--       <dependency>
             <groupId>com.grace.train12306</groupId>
             <artifactId>train12306-cache-spring-boot-starter</artifactId>
             <version>${project.version}</version>
-        </dependency>
+        </dependency>-->
 
         <dependency>
             <groupId>com.grace.train12306</groupId>

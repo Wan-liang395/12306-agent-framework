@@ -13,9 +13,10 @@
     <artifactId>train12306-agent-service</artifactId>
 
     <properties>
+        <spring-ai-alibaba-extensions.version>1.1.0.0-RC2</spring-ai-alibaba-extensions.version>
+        <spring-boot.version>3.2.0</spring-boot.version>
         <spring-ai.version>1.1.0</spring-ai.version>
         <spring-ai-alibaba.version>1.1.0.0-RC2</spring-ai-alibaba.version>
-        <spring-ai-alibaba-extensions.version>1.1.0.0-RC2</spring-ai-alibaba-extensions.version>
     </properties>
 
     <dependencyManagement>
@@ -66,6 +67,7 @@
     </dependencyManagement>
 
     <dependencies>
+        <!-- Spring Boot Web Starter -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
@@ -75,6 +77,8 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <!-- 12306 自定义 Starter 依赖 -->
         <dependency>
             <groupId>com.grace.train12306</groupId>
             <artifactId>train12306-base-spring-boot-starter</artifactId>
@@ -100,6 +104,8 @@
             <artifactId>train12306-cache-spring-boot-starter</artifactId>
             <version>${project.version}</version>
         </dependency>
+
+        <!-- 微服务治理 -->
         <dependency>
             <groupId>com.alibaba.cloud</groupId>
             <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
@@ -121,6 +127,7 @@
             <artifactId>feign-okhttp</artifactId>
         </dependency>
 
+        <!-- Spring AI Alibaba & DashScope -->
         <dependency>
             <groupId>com.alibaba.cloud.ai</groupId>
             <artifactId>spring-ai-alibaba-starter-dashscope</artifactId>
@@ -140,6 +147,8 @@
                 </exclusion>
             </exclusions>
         </dependency>
+
+        <!-- 其他工具依赖 -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-mcp-client-webflux</artifactId>
@@ -158,6 +167,8 @@
             <groupId>com.alibaba.fastjson2</groupId>
             <artifactId>fastjson2</artifactId>
         </dependency>
+
+        <!-- JAXB 兼容性配置 (JDK 9+ 必要) -->
         <dependency>
             <groupId>javax.xml.bind</groupId>
             <artifactId>jaxb-api</artifactId>
@@ -178,14 +189,29 @@
             <artifactId>activation</artifactId>
             <version>1.1.1</version>
         </dependency>
+
         <dependency>
             <groupId>com.grace.train12306</groupId>
             <artifactId>train12306-ticket-service</artifactId>
             <version>0.0.1-SNAPSHOT</version>
             <scope>compile</scope>
         </dependency>
-        <!-- NoClassDefFoundError: javax/xml/bind/JAXBException end -->
     </dependencies>
+
+    <repositories>
+        <repository>
+            <id>spring-milestones</id>
+            <name>Spring Milestones</name>
+            <url>https://repo.spring.io/milestone</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+            <!-- 增加这个配置，确保即使有镜像也会尝试这里 -->
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+        </repository>
+    </repositories>
 
     <build>
         <finalName>${project.artifactId}</finalName>
@@ -203,5 +229,4 @@
             </plugin>
         </plugins>
     </build>
-
 </project>
