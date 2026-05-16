@@ -52,5 +52,7 @@ management:
       application: ${spring.application.name}
   security:
     jwt:
-      secret: 7ZyU5K2Yt9FgqWkE6vNxQ==
+      secret: IzAkWtEF46P+puMGHlEcvKRYPpFSEeYsHxB8yqK56pbqThUwBZm/IW4If1f0xgiK
+
+
 

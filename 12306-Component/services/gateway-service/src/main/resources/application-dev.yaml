@@ -42,3 +42,6 @@ spring:
                   - /api/order-service/order/ticket/query
                   - /api/order-service/order/ticket/page
                   - /api/order-service/order/ticket/self/page
+  security:
+    jwt:
+      secret:  IzAkWtEF46P+puMGHlEcvKRYPpFSEeYsHxB8yqK56pbqThUwBZm/IW4If1f0xgiK
