@@ -41,6 +41,14 @@ public class PassengerController {
     }
 
     /**
+     * 内部接口：根据用户名查询乘车人列表（供其他微服务调用）
+     */
+    @GetMapping("/api/user-service/inner/passenger/query")
+    public Result<List<PassengerRespDTO>> listPassengerByUsername(@RequestParam("username") String username) {
+        return Results.success(passengerService.listPassengerQueryByUsername(username));
+    }
+
+    /**
      * 新增乘车人
      */
     @Idempotent(

@@ -3,6 +3,8 @@ package com.grace.train12306.biz.agentservice.tool;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.grace.train12306.biz.agentservice.config.StationDictionaryLoader;
 import com.grace.train12306.biz.agentservice.remote.TicketFeignClient;
 import com.grace.train12306.framework.starter.convention.result.Result;
@@ -18,56 +20,81 @@ public class TicketAgentTool {
 
     private final TicketFeignClient ticketFeignClient;
 
-    @Tool(description = "查询火车票。需提供出发地、目的地和yyyy-MM-dd日期。")
-    public String queryTicket(String fromStation, String toStation, String departureDate) {
-        // 1. 联想：如果匹配不到，尝试加“南”等后缀联想
+    // 👉 核心黑科技：定义强类型的 JSON Schema 约束载体
+    public record QueryTicketReq(
+            @JsonProperty(required = true)
+            @JsonPropertyDescription("出发地，必须是明确的中文站名（绝对不能为null），如：北京南")
+            String fromStation,
+
+            @JsonProperty(required = true)
+            @JsonPropertyDescription("目的地，必须是明确的中文站名（绝对不能为null），如：杭州东")
+            String toStation,
+
+            @JsonProperty(required = true)
+            @JsonPropertyDescription("出发日期，格式必须为 yyyy-MM-dd")
+            String departureDate
+    ) {}
+
+    @Tool(description = "查询火车票。用于获取车次列表以及后台下单所需的列车标识 trainId。")
+    public String queryTicket(QueryTicketReq req) {
+        // 大模型框架会自动将符合要求的 JSON 映射为这个 Record 对象
+        String fromStation = req.fromStation();
+        String toStation = req.toStation();
+        String departureDate = req.departureDate();
+
+        log.info("🎫 [queryTicket] 收到强类型校验请求: fromStation={}, toStation={}, departureDate={}", fromStation, toStation, departureDate);
+
+        // 转换站名到站编码 (兼容联想与兜底)
         String fromCode = StationDictionaryLoader.STATION_MAP.getOrDefault(fromStation, fromStation);
         String toCode = StationDictionaryLoader.STATION_MAP.getOrDefault(toStation, toStation);
+        log.info("🎫 [queryTicket] 编码转换: {} -> {}, {} -> {}", fromStation, fromCode, toStation, toCode);
 
         try {
+            // 发起分布式 RPC 调用
             Result<Object> result = ticketFeignClient.queryTickets(fromCode, toCode, departureDate);
+            log.info("🎫 [queryTicket] API返回: success={}", result.isSuccess());
+
             if (result.isSuccess() && result.getData() != null) {
                 JSONObject raw = JSON.parseObject(JSON.toJSONString(result.getData()));
                 JSONArray trains = raw.getJSONArray("trainList");
 
-                // 2. 压缩:只保留大模型关注的核心 4 个字段，展示前 10 趟
-                // 防呆格式化：显式提供到达时间，并将历时转换为可读文本
-                JSONArray slimList = new JSONArray();
-                int showCount = Math.min(trains.size(), 10);
-                for (int i = 0; i < showCount; i++) {
-                    JSONObject t = trains.getJSONObject(i);
-                    JSONObject s = new JSONObject();
-                    s.put("车次", t.getString("trainNumber"));   // 车次
-                    s.put("出发时间", t.getString("departureTime")); // 出发
-                    s.put("到达时间", t.getString("arrivalTime")); // 到达
-                    // 👉 核心修复：把 "06:25" 强制转换成 "6小时25分钟"，防止大模型误认
-                    String rawDuration = t.getString("duration");
-                    if (rawDuration != null && rawDuration.contains(":")) {
-                        String[] parts = rawDuration.split(":");
-                        try {
-                            int hours = Integer.parseInt(parts[0]);
-                            int minutes = Integer.parseInt(parts[1]);
-                            s.put("历时", hours + "小时" + minutes + "分钟");
-                        } catch (NumberFormatException e) {
-                            s.put("历时", rawDuration);
-                        }
-                    } else {
-                        s.put("历时", rawDuration);
-                    }
-                    s.put("余票信息", t.getJSONArray("seatClassList"));
-                    slimList.add(s);
+                if (trains == null || trains.isEmpty()) {
+                    log.info("🎫 [queryTicket] 未找到车次");
+                    return "未找到" + departureDate + "从" + fromStation + "到" + toStation + "的列车。请提醒用户更换日期或调整站点。";
                 }
 
-                JSONObject aiResponse = new JSONObject();
-                aiResponse.put("trains", slimList);
-                aiResponse.put("total", trains.size());
-                aiResponse.put("msg", "数据已精简，若班次过多请告知用户可查询具体时段。");
-                return aiResponse.toJSONString();
+                log.info("🎫 [queryTicket] 找到 {} 个车次", trains.size());
+
+                // 返回简洁文本并压缩上下文
+                StringBuilder sb = new StringBuilder();
+                sb.append("查询成功！找到 ").append(trains.size()).append(" 个车次：\n");
+
+                int showCount = Math.min(trains.size(), 5);
+                for (int i = 0; i < showCount; i++) {
+                    JSONObject t = trains.getJSONObject(i);
+                    String trainNumber = t.getString("trainNumber");
+                    // 👉 极其重要：保留 trainId，供下一个购票 Tool 跨越上下文使用
+                    String trainId = t.getString("trainId");
+                    String depName = t.getString("departure");
+                    String arrName = t.getString("arrival");
+                    String depTime = t.getString("departureTime");
+                    String arrTime = t.getString("arrivalTime");
+
+                    sb.append(trainNumber).append("次 ").append(depName).append("(").append(depTime).append(")→").append(arrName).append("(").append(arrTime).append(")");
+                    // 👉 优化提示词：给大模型最强烈的心理暗示，强制它提取这个数字
+                    sb.append(" [重要!下单必须传此trainId:").append(trainId).append("]\n");
+                }
+
+                String responseStr = sb.toString();
+                log.info("🎫 [queryTicket] 返回给大模型的结果:\n{}", responseStr);
+                return responseStr;
             }
-            return "未查到相关班次。";
+
+            log.warn("⚠️ [queryTicket] API返回失败: {}", result.getMessage());
+            return "查询失败：" + (result.getMessage() != null ? result.getMessage() : "请稍后重试");
         } catch (Exception e) {
-            log.error("查票异常", e);
-            return "服务响应慢，请稍后再试。";
+            log.error("❌ [queryTicket] 异常", e);
+            return "底层微服务查询出错，请稍后再试。";
         }
     }
 }
