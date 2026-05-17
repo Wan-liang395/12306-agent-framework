@@ -42,6 +42,11 @@ spring:
                   - /api/order-service/order/ticket/query
                   - /api/order-service/order/ticket/page
                   - /api/order-service/order/ticket/self/page
+
+        - id: train12306-agent-service
+          uri: lb://train12306-agent${unique-name:}-service
+          predicates:
+            - Path=/api/agent/**
   security:
     jwt:
       secret:  IzAkWtEF46P+puMGHlEcvKRYPpFSEeYsHxB8yqK56pbqThUwBZm/IW4If1f0xgiK

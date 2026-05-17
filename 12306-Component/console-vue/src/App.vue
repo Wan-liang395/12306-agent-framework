@@ -6,6 +6,7 @@ import BreadHeader from '@/components/bread-header'
 import zhCN from 'ant-design-vue/es/locale/zh_CN'
 import Header from './components/header'
 import Sider from './components/sider'
+import AiChat from './components/ai-chat'
 import jsCookie from 'js-cookie'
 import axios from './service/axios'
 import dayjs from 'dayjs'
@@ -62,6 +63,7 @@ watch(
         </Content>
       </Layout>
     </Layout>
+    <AiChat />
   </ConfigProvider>
 </template>
 

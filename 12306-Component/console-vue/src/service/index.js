@@ -188,6 +188,15 @@ const fetchRefundTicket = async (body) => {
     })
 }
 
+const fetchAgentChat = async (message, chatId, username) => {
+    const {data} = await http({
+        method: 'GET',
+        url: '/api/agent/chat',
+        params: {message, chatId, username}
+    })
+    return data
+}
+
 export {
     fetchLogin,
     fetchRegister,
@@ -209,5 +218,6 @@ export {
     fetchOrderStatus,
     fetchUserUpdate,
     fetchMyTicket,
-    fetchRefundTicket
+    fetchRefundTicket,
+    fetchAgentChat
 }

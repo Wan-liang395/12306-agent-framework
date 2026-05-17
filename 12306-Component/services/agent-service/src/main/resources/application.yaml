@@ -6,7 +6,8 @@ server:
       enabled: true
       force: true
 spring:
-  application: train12306-agent${unique-name:}-service
+  application:
+    name: train12306-agent${unique-name:}-service
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: root
@@ -38,6 +39,8 @@ spring:
       api-key: sk-c6f82763fbc04cffa0274ce954423ca3
       chat:
         options:
+          model: qwen-max
+          enable-search: false
           connect-timeout: 60000
           read-timeout: 60000
       retry:
@@ -47,10 +50,10 @@ spring:
           multiplier: 2
           max-interval: 10000
 
-    # Spring AI MCP 客户端配置 (完整保留，用于对接你之前的能力)
+    # Spring AI MCP 客户端配置 - 暂时禁用，使用本地工具
     mcp:
       client:
-        enabled: true
+        enabled: false
         name: tencent-mcp-server
         version: 1.0.0
         request-timeout: 60s
@@ -80,3 +83,8 @@ rag:
 # milvus: ... (暂且不用，等需要知识库检索时再配置)
 # prometheus: ... (暂且不用)
 # cls: ... (暂且不用)
+
+logging:
+  level:
+    com.alibaba.cloud.ai.dashscope: DEBUG
+    org.springframework.ai.model.tool: DEBUG
