@@ -138,9 +138,6 @@ const messages = reactive([])
 const messagesRef = ref(null)
 const inputRef = ref(null)
 
-const chatId = ref(Cookies.get('userId') || 'default_user')
-const username = ref(Cookies.get('username') || '')
-
 const toggleChat = () => {
   visible.value = !visible.value
 }
@@ -238,9 +235,13 @@ const sendMessage = async () => {
   scrollToBottom()
 
   try {
-    const res = await fetchAgentChat(text, chatId.value, username.value)
-    loading.value = false
-    console.log('AI 接口返回:', res)
+    const currentChatId = Cookies.get('userId') || 'default_user'
+    const currentUsername = Cookies.get('username') || ''
+
+    console.log('当前发送请求的用户身份:', currentUsername)
+
+    // 把实时获取的值传给后端
+    const res = await fetchAgentChat(text, currentChatId, currentUsername)
 
     if ((res.code == 0 || res.code === '0') && res.data) {
       const aiText = res.data

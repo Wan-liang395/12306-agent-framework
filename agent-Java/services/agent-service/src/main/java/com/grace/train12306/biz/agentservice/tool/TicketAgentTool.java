@@ -20,7 +20,7 @@ public class TicketAgentTool {
 
     private final TicketFeignClient ticketFeignClient;
 
-    // 👉 核心黑科技：定义强类型的 JSON Schema 约束载体
+    //定义强类型的 JSON Schema 约束载体
     public record QueryTicketReq(
             @JsonProperty(required = true)
             @JsonPropertyDescription("出发地，必须是明确的中文站名（绝对不能为null），如：北京南")
@@ -73,7 +73,7 @@ public class TicketAgentTool {
                 for (int i = 0; i < showCount; i++) {
                     JSONObject t = trains.getJSONObject(i);
                     String trainNumber = t.getString("trainNumber");
-                    // 👉 极其重要：保留 trainId，供下一个购票 Tool 跨越上下文使用
+                    // 保留 trainId，供下一个购票 Tool 跨越上下文使用
                     String trainId = t.getString("trainId");
                     String depName = t.getString("departure");
                     String arrName = t.getString("arrival");
@@ -81,7 +81,7 @@ public class TicketAgentTool {
                     String arrTime = t.getString("arrivalTime");
 
                     sb.append(trainNumber).append("次 ").append(depName).append("(").append(depTime).append(")→").append(arrName).append("(").append(arrTime).append(")");
-                    // 👉 优化提示词：给大模型最强烈的心理暗示，强制它提取这个数字
+                    // 给大模型最强烈的心理暗示，强制它提取这个数字
                     sb.append(" [重要!下单必须传此trainId:").append(trainId).append("]\n");
                 }
 

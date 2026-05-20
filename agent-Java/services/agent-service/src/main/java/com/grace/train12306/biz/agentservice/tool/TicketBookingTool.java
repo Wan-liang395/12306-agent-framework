@@ -25,7 +25,7 @@ public class TicketBookingTool {
     private final TicketFeignClient ticketFeignClient;
     private final UserFeignClient userFeignClient;
 
-    // 席别名称 → 编码映射 (完美对齐 12306 底层数据库)
+    // 席别名称 → 编码映射
     private static final Map<String, Integer> SEAT_TYPE_MAP = Map.ofEntries(
             Map.entry("商务座", 0),
             Map.entry("一等座", 1),
@@ -40,7 +40,6 @@ public class TicketBookingTool {
             Map.entry("无座", 10)
     );
 
-    // 👉 核心：定义强类型的入参 Schema 约束
     public record BookTicketReq(
             @JsonProperty(required = true)
             @JsonPropertyDescription("列车内部标识(绝对不能为null)，必须从查票结果的隐藏参数中提取")
@@ -70,39 +69,34 @@ public class TicketBookingTool {
         String arrival = req.arrival();
         String passengerName = req.passengerName();
         String seatType = req.seatType();
-        // ==========================================
-        // 🚨 新增：专门针对 AI 幻觉的防呆拦截
-        // 如果大模型传进来的 trainId 长得像车次号（字母开头+数字，如 G35, D717）
-        // ==========================================
+
+        // 1：参数格式异常，打回让大模型重做
         if (trainId == null || !trainId.matches("^\\d+$")) {
-            log.warn("⚠️ [Agent 拦截] 大模型传错了 trainId，传了非法字符：{}", trainId);
-            return "下单失败：系统错误！你传入的 trainId (" + trainId + ") 格式不正确，必须是纯数字！请严格从刚才的查票结果中，提取出 [重要!下单必须传此trainId: xxx] 里面的纯数字填入，绝对不能自己瞎编占位符！";
+            log.warn("⚠️ [Agent 拦截] 大模型传错 trainId：{}", trainId);
+            // 这里返回的不是给用户的报错，而是给大模型的指令！
+            return "执行失败：你传入的 trainId (" + trainId + ") 格式不正确，必须是纯数字！请反思并在后台自动提取正确的数字重新调用本工具，不要把这个错误直接告诉用户。";
         }
 
         log.info("🚀 [Agent 动作] 正在下单。trainId: {}, {}→{}, 乘客: {}, 席别: {}", trainId, departure, arrival, passengerName, seatType);
 
         try {
-            // 1. 解析席别编码
             Integer seatTypeCode = SEAT_TYPE_MAP.get(seatType);
             if (seatTypeCode == null) {
-                return "不支持的席别类型：" + seatType + "。可选：" + SEAT_TYPE_MAP.keySet();
+                return "执行失败：不支持的席别类型 " + seatType + "。请告诉用户系统仅支持：" + SEAT_TYPE_MAP.keySet() + "，并询问其是否更换席别。";
             }
 
-            // 2. 隐式提取当前登录用户并验证
             String username = AgentRequestContext.getUsername();
             if (username == null || username.isEmpty()) {
-                return "无法获取当前用户信息，请先在前端登录系统。";
+                return "执行失败：无法获取当前用户信息。请礼貌地提示用户：‘请先在前端完成登录，再进行购票。’";
             }
 
-            // 3. 反查真实的乘车人ID
             Result<List<Map<String, Object>>> passengerResult = userFeignClient.queryPassengerByUsername(username);
             if (!passengerResult.isSuccess() || passengerResult.getData() == null) {
-                return "查询乘车人信息失败，请确认该账号已添加常用联系人。";
+                return "执行失败：乘车人列表查询异常。请提示用户检查账号状态。";
             }
 
             String passengerId = null;
             for (Map<String, Object> p : passengerResult.getData()) {
-                // 兼容 camelCase 和 snake_case
                 String realName = (String) p.getOrDefault("realName", p.get("real_name"));
                 String id = (String) p.getOrDefault("id", p.get("ID"));
                 if (passengerName.equals(realName)) {
@@ -111,10 +105,9 @@ public class TicketBookingTool {
                 }
             }
             if (passengerId == null) {
-                return "未找到乘车人「" + passengerName + "」，请确认已在系统中将该乘客添加为常用联系人。";
+                return "执行失败：未找到名为「" + passengerName + "」的乘车人。请主动提示用户：‘系统中没有找到该联系人，请先在 12306 常用联系人中添加后再试。’";
             }
 
-            // 4. 严格组装微服务所需参数
             Map<String, Object> orderParam = new HashMap<>();
             orderParam.put("trainId", trainId);
             orderParam.put("departure", departure);
@@ -125,14 +118,13 @@ public class TicketBookingTool {
             passenger.put("seatType", seatTypeCode);
             orderParam.put("passengers", List.of(passenger));
 
-            // 5. 发起分布式事务调用
+            // 发起分布式事务调用
             Result<Object> result = ticketFeignClient.purchaseTicket(orderParam);
 
             if (result.isSuccess() && result.getData() != null) {
                 JSONObject orderData = JSON.parseObject(JSON.toJSONString(result.getData()));
                 String orderSn = orderData.getString("orderSn");
 
-                // 👉 严格按照前端需要的格式返回，触发客票卡片
                 JSONObject successResponse = new JSONObject();
                 successResponse.put("status", "SUCCESS");
                 successResponse.put("orderSn", orderSn);
@@ -140,10 +132,14 @@ public class TicketBookingTool {
                 return successResponse.toJSONString();
             }
 
-            return "微服务下单失败，原因：" + result.getMessage();
+            // 2：业务被拒绝（如余票不足、防重放拦截）
+            log.warn("⚠️ [Agent 观察] 微服务拒绝下单，原因：{}", result.getMessage());
+            return "执行下单失败，底层系统提示：" + result.getMessage() + "。请基于此原因向用户解释，并主动提供替代建议（例如：如果余票不足，请主动推荐用户购买一等座或其他车次）。";
+
         } catch (Exception e) {
-            log.error("Agent 购票 RPC 异常", e);
-            return "购票通道拥挤或微服务网络异常，请稍后再试。";
+            // 3：严重网络异常或服务熔断降级
+            log.error("❌ Agent 购票 RPC 异常", e);
+            return "执行下单时底层微服务发生网络拥挤或超时。请停止调用工具，用安抚的语气告诉用户系统当前正在排队或维护中，建议稍后再试。";
         }
     }
 }
