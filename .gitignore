@@ -31,3 +31,10 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Python ###
+agent-python/venv/
+agent-python/.venv/
+agent-python/__pycache__/
+agent-python/*.pyc
+agent-python/.env
