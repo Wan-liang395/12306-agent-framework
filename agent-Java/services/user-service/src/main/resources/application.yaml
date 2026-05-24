@@ -50,9 +50,7 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
-  security:
-    jwt:
-      secret: IzAkWtEF46P+puMGHlEcvKRYPpFSEeYsHxB8yqK56pbqThUwBZm/IW4If1f0xgiK
+
 
 
 

@@ -305,12 +305,14 @@ const sendMessage = async () => {
       typewriterEffect(msgIndex, '抱歉: ' + errMsg)
     }
   } catch (e) {
-    loading.value = false
     console.error('AI 请求异常:', e)
     const detail = e.response?.data?.message || e.message || '未知错误'
     const msgIndex = messages.length
     messages.push({role: 'ai', content: '请求失败: ' + detail, displayContent: '', typing: false})
     typewriterEffect(msgIndex, '请求失败: ' + detail)
+  } finally {
+    // 关键修复：确保任何情况下请求结束后都重置状态
+    loading.value = false
   }
 }
 </script>

@@ -11,9 +11,6 @@ spring:
         server-addr: 127.0.0.1:8848
         username: nacos
         password: nacos
-  security:
-    jwt:
-      secret: IzAkWtEF46P+puMGHlEcvKRYPpFSEeYsHxB8yqK56pbqThUwBZm/IW4If1f0xgiK
 management:
   endpoints:
     web:

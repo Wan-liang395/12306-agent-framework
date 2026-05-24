@@ -36,65 +36,69 @@ public class TicketAgentTool {
     ) {}
 
     @Tool(description = "查询火车票。用于获取车次列表以及后台下单所需的列车标识 trainId。")
-    public String queryTicket(QueryTicketReq req) {
-        // 大模型框架会自动将符合要求的 JSON 映射为这个 Record 对象
-        String fromStation = req.fromStation();
-        String toStation = req.toStation();
-        String departureDate = req.departureDate();
+public String queryTicket(QueryTicketReq req) {
+    // 大模型框架会自动将符合要求的 JSON 映射为这个 Record 对象
+    String fromStation = req.fromStation();
+    String toStation = req.toStation();
+    String departureDate = req.departureDate();
 
-        log.info("🎫 [queryTicket] 收到强类型校验请求: fromStation={}, toStation={}, departureDate={}", fromStation, toStation, departureDate);
+    log.info("🎫 [queryTicket] 收到强类型校验请求: fromStation={}, toStation={}, departureDate={}", fromStation, toStation, departureDate);
 
-        // 转换站名到站编码 (兼容联想与兜底)
-        String fromCode = StationDictionaryLoader.STATION_MAP.getOrDefault(fromStation, fromStation);
-        String toCode = StationDictionaryLoader.STATION_MAP.getOrDefault(toStation, toStation);
-        log.info("🎫 [queryTicket] 编码转换: {} -> {}, {} -> {}", fromStation, fromCode, toStation, toCode);
+    // 转换站名到站编码 (兼容联想与兜底)
+    String fromCode = StationDictionaryLoader.STATION_MAP.getOrDefault(fromStation, fromStation);
+    String toCode = StationDictionaryLoader.STATION_MAP.getOrDefault(toStation, toStation);
+    log.info("🎫 [queryTicket] 编码转换: {} -> {}, {} -> {}", fromStation, fromCode, toStation, toCode);
 
-        try {
-            // 发起分布式 RPC 调用
-            Result<Object> result = ticketFeignClient.queryTickets(fromCode, toCode, departureDate);
-            log.info("🎫 [queryTicket] API返回: success={}", result.isSuccess());
+    try {
+        // 发起分布式 RPC 调用
+        Result<Object> result = ticketFeignClient.queryTickets(fromCode, toCode, departureDate);
+        log.info("🎫 [queryTicket] API返回: success={}", result.isSuccess());
 
-            if (result.isSuccess() && result.getData() != null) {
-                JSONObject raw = JSON.parseObject(JSON.toJSONString(result.getData()));
-                JSONArray trains = raw.getJSONArray("trainList");
+        if (result.isSuccess() && result.getData() != null) {
+            JSONObject raw = JSON.parseObject(JSON.toJSONString(result.getData()));
+            JSONArray trains = raw.getJSONArray("trainList");
 
-                if (trains == null || trains.isEmpty()) {
-                    log.info("🎫 [queryTicket] 未找到车次");
-                    return "未找到" + departureDate + "从" + fromStation + "到" + toStation + "的列车。请提醒用户更换日期或调整站点。";
-                }
-
-                log.info("🎫 [queryTicket] 找到 {} 个车次", trains.size());
-
-                // 返回简洁文本并压缩上下文
-                StringBuilder sb = new StringBuilder();
-                sb.append("查询成功！找到 ").append(trains.size()).append(" 个车次：\n");
-
-                int showCount = Math.min(trains.size(), 5);
-                for (int i = 0; i < showCount; i++) {
-                    JSONObject t = trains.getJSONObject(i);
-                    String trainNumber = t.getString("trainNumber");
-                    // 保留 trainId，供下一个购票 Tool 跨越上下文使用
-                    String trainId = t.getString("trainId");
-                    String depName = t.getString("departure");
-                    String arrName = t.getString("arrival");
-                    String depTime = t.getString("departureTime");
-                    String arrTime = t.getString("arrivalTime");
-
-                    sb.append(trainNumber).append("次 ").append(depName).append("(").append(depTime).append(")→").append(arrName).append("(").append(arrTime).append(")");
-                    // 给大模型最强烈的心理暗示，强制它提取这个数字
-                    sb.append(" [重要!下单必须传此trainId:").append(trainId).append("]\n");
-                }
-
-                String responseStr = sb.toString();
-                log.info("🎫 [queryTicket] 返回给大模型的结果:\n{}", responseStr);
-                return responseStr;
+            if (trains == null || trains.isEmpty()) {
+                log.info("🎫 [queryTicket] 未找到车次");
+                return "未找到" + departureDate + "从" + fromStation + "到" + toStation + "的列车。请提醒用户更换日期或调整站点。";
             }
 
-            log.warn("⚠️ [queryTicket] API返回失败: {}", result.getMessage());
-            return "查询失败：" + (result.getMessage() != null ? result.getMessage() : "请稍后重试");
-        } catch (Exception e) {
-            log.error("❌ [queryTicket] 异常", e);
-            return "底层微服务查询出错，请稍后再试。";
+            log.info("🎫 [queryTicket] 找到 {} 个车次", trains.size());
+
+            // 返回简洁文本并压缩上下文
+            StringBuilder sb = new StringBuilder();
+            sb.append("查询成功！找到 ").append(trains.size()).append(" 个车次：\n");
+
+            int showCount = Math.min(trains.size(), 5);
+            for (int i = 0; i < showCount; i++) {
+                JSONObject t = trains.getJSONObject(i);
+                String trainNumber = t.getString("trainNumber");
+                String trainId = t.getString("trainId");
+                String depName = t.getString("departure");
+                String arrName = t.getString("arrival");
+                String depTime = t.getString("departureTime");
+                String arrTime = t.getString("arrivalTime");
+
+                sb.append(trainNumber).append("次 ").append(depName).append("(").append(depTime).append(")→").append(arrName).append("(").append(arrTime).append(")");
+
+                // 把零散的心理暗示升级为“强约束参数包”
+                sb.append(" 【🚨下单调用 TicketBookingTool 时，必须严格使用以下三个精确参数：")
+                        .append("trainId=").append(trainId).append(", ")
+                        .append("departure=").append(depName).append(", ")
+                        .append("arrival=").append(arrName)
+                        .append("】\n");
+            }
+
+            String responseStr = sb.toString();
+            log.info("🎫 [queryTicket] 返回给大模型的结果:\n{}", responseStr);
+            return responseStr;
         }
+
+        log.warn("⚠️ [queryTicket] API返回失败: {}", result.getMessage());
+        return "查询失败：" + (result.getMessage() != null ? result.getMessage() : "请稍后重试");
+    } catch (Exception e) {
+        log.error("❌ [queryTicket] 异常", e);
+        return "底层微服务查询出错，请稍后再试。";
     }
+}
 }

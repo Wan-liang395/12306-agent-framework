@@ -62,7 +62,10 @@ public class TicketBookingTool {
             String seatType
     ) {}
 
-    @Tool(description = "预订/购买火车票。必须先调用 queryTicket 查票工具获取车次列表和对应的 trainId 后，才能调用此工具。")
+    @Tool(description = "预订/购买火车票的核心工具。工作流强约束：\n" +
+            "1. 前置条件：必须先调用 queryTicket 查票工具获取车次列表及对应的 trainId。\n" +
+            "2. 参数清洗红线：本工具的 departure（出发站）和 arrival（到达站）参数，必须严格使用查票工具返回结果中的【精确车站名】（如'北京南'、'杭州东'）。\n" +
+            "3. 严禁行为：绝对不能直接使用用户口语输入的泛指城市名（如'北京'、'杭州'），否则底层系统将报“车站数据错误”并直接拒绝交易！")
     public String bookTicket(BookTicketReq req) {
         String trainId = req.trainId();
         String departure = req.departure();
@@ -133,7 +136,14 @@ public class TicketBookingTool {
             }
 
             // 2：业务被拒绝（如余票不足、防重放拦截）
+            String errorMsg = result.getMessage();
             log.warn("⚠️ [Agent 观察] 微服务拒绝下单，原因：{}", result.getMessage());
+            // 针对“车站错误”触发强制重试与自我修正
+            if (errorMsg != null && errorMsg.contains("车站数据错误")) {
+                return "执行失败：底层系统报错「" + errorMsg + "」。" +
+                        "原因分析：你传入的出发站(" + departure + ")或到达站(" + arrival + ")可能使用了泛指城市名，而该车次需要极其精确的车站名(如'北京南')。" +
+                        "行动指令：绝对不要把这个错误直接告诉用户！请立即在后台调用查票工具重新核实该车次的准确起止站，并使用正确的车站参数重新调用本下单工具。";
+            }
             return "执行下单失败，底层系统提示：" + result.getMessage() + "。请基于此原因向用户解释，并主动提供替代建议（例如：如果余票不足，请主动推荐用户购买一等座或其他车次）。";
 
         } catch (Exception e) {
