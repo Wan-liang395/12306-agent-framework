@@ -221,10 +221,9 @@ const sendMessage = async () => {
   const text = inputText.value.trim()
   if (!text || loading.value) return
 
-  // 添加用户消息
+  // 1. 添加用户消息到屏幕
   messages.push({role: 'user', content: text})
 
-  // 强制清空输入框（兼容 Edge）
   if (inputRef.value?.$el) {
     const nativeInput = inputRef.value.$el.querySelector('input')
     if (nativeInput) nativeInput.value = ''
@@ -238,80 +237,128 @@ const sendMessage = async () => {
     const currentChatId = Cookies.get('userId') || 'default_user'
     const currentUsername = Cookies.get('username') || ''
 
-    console.log('当前发送请求的用户身份:', currentUsername)
+    // 2. 提前在界面上创建一个空的 AI 消息气泡，准备接收水流
+    const msgIndex = messages.length
+    messages.push({
+      role: 'ai',
+      content: '',
+      displayContent: '',
+      typing: true, // 开启光标闪烁
+      isTicket: false,
+      bookInfo: null
+    })
 
-    // 把实时获取的值传给后端
-    const res = await fetchAgentChat(text, currentChatId, currentUsername)
+    // 3. 绕过 Axios，使用原生 fetch 发起 SSE 流式请求
+    // 注意：这里直接用 /api 开头，走你本地的 Vue 代理网关
+    const url = `/api/agent/chat?message=${encodeURIComponent(text)}&chatId=${encodeURIComponent(currentChatId)}&username=${encodeURIComponent(currentUsername)}`
 
-    if ((res.code == 0 || res.code === '0') && res.data) {
-      const aiText = res.data
-      // 检测是否包含订单号（电子客票）
-      if (aiText.includes('订单号')) {
-        const ticketLines = parseTicketInfo(aiText)
-        if (ticketLines) {
-          const orderSnMatch = aiText.match(/订单号[：:]\s*(\S+)/)
-          const orderSn = orderSnMatch ? orderSnMatch[1] : null
-          messages.push({
-            role: 'ai',
-            content: aiText,
-            displayContent: aiText,
-            isTicket: true,
-            ticketLines,
-            orderSn,
-            typing: false
-          })
-          scrollToBottom()
-          // 1.5 秒后自动跳转到支付页面
-          if (orderSn) {
-            setTimeout(() => {
-              visible.value = false
-              router.push({path: '/order', query: {sn: orderSn}})
-            }, 1500)
-          }
-          return
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'text/event-stream'
+        // 如果你的微服务网关强制要求 Token，可以解开下面这行：
+        // 'Authorization': Cookies.get('token') || ''
+      }
+    })
+
+    if (!response.ok) throw new Error(`HTTP 异常: ${response.status}`)
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder('utf-8')
+    let fullAiText = ''
+
+    //用 buffer 暂存被网络劈成两半的半截文字，防止数据乱码
+    let buffer = ''
+    // 建立“前端蓄水池”打字机！不受网络卡顿影响，保证输出丝滑
+    let displayQueue = ''
+    const typingTimer = setInterval(() => {
+      if (displayQueue.length > 0) {
+        messages[msgIndex].displayContent += displayQueue.charAt(0) // 每次匀速取出一个字
+        displayQueue = displayQueue.substring(1)
+        scrollToBottom()
+      }
+    }, 30) // 30ms敲一个字，手感最佳，你可以自己调！
+
+    let isFirstChunk = true // 标记是否收到大模型的第一个字
+
+    // 4. 开启无限循环，源源不断地接收字节流！
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break // 数据流结束，跳出循环
+// 真正收到大模型的第一个字时，才关掉“AI正在思考中”的Loading动画！
+      if (isFirstChunk) {
+        loading.value = false
+        isFirstChunk = false
+      }
+
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      // 把最后不完整的一行退回 buffer，等下一个数据包来了拼接！
+
+      // 解析 SSE 的标准格式 "data: xxxx"
+      for (const line of lines) {
+        if (line.startsWith('data:')) {
+          let dataContent = line.substring(5)
+          if (dataContent.startsWith(' ')) dataContent = dataContent.substring(1)
+
+          fullAiText += dataContent
+          // 把后端送过来的字，不直接上屏，而是塞进蓄水池，让定时器慢慢敲
+          displayQueue += dataContent
         }
       }
-      // 检测购票跳转标记
-      const bookMatch = aiText.match(/\[TICKET_BOOK:([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^\]]+)\]/)
-      if (bookMatch) {
-        const cleanText = aiText.replace(/\[TICKET_BOOK:[^\]]+\]/, '').trim()
-        const bookInfo = {
-          trainId: bookMatch[1],
-          trainNumber: bookMatch[2],
-          departure: bookMatch[3],
-          arrival: bookMatch[4],
-          departureDate: bookMatch[5],
-          seatType: bookMatch[6]
-        }
-        // 先显示文字部分（打字机效果）
-        const msgIndex = messages.length
-        messages.push({role: 'ai', content: cleanText, displayContent: '', typing: false, bookInfo: null})
-        typewriterEffect(msgIndex, cleanText)
-        // 打字机结束后显示购票卡片
-        setTimeout(() => {
-          messages[messages.length - 1].bookInfo = bookInfo
-          scrollToBottom()
-        }, cleanText.length * 40 + 200)
-        return
-      }
-      // 普通文本，打字机效果
-      const msgIndex = messages.length
-      messages.push({role: 'ai', content: aiText, displayContent: '', typing: false})
-      typewriterEffect(msgIndex, aiText)
-    } else {
-      const errMsg = res.message || '服务暂时不可用'
-      const msgIndex = messages.length
-      messages.push({role: 'ai', content: '抱歉: ' + errMsg, displayContent: '', typing: false})
-      typewriterEffect(msgIndex, '抱歉: ' + errMsg)
     }
+
+    // 网络流断开后，等待蓄水池里的字全部敲完，再渲染卡片！
+    const checkFinishTimer = setInterval(() => {
+      if (displayQueue.length === 0) {
+        clearInterval(typingTimer)
+        clearInterval(checkFinishTimer)
+
+        messages[msgIndex].typing = false
+        messages[msgIndex].content = fullAiText
+
+        // 6. 终极炫技：等文字出完后，进行正则表达式匹配，瞬间将文本切换为“动态卡片”！
+        if (fullAiText.includes('订单号')) {
+          const ticketLines = parseTicketInfo(fullAiText)
+          if (ticketLines) {
+            const orderSnMatch = fullAiText.match(/订单号[：:]\s*(\S+)/)
+            const orderSn = orderSnMatch ? orderSnMatch[1] : null
+
+            messages[msgIndex].isTicket = true
+            messages[msgIndex].ticketLines = ticketLines
+            messages[msgIndex].orderSn = orderSn
+            scrollToBottom()
+
+            if (orderSn) {
+              setTimeout(() => {
+                visible.value = false
+                router.push({path: '/order', query: {sn: orderSn}})
+              }, 1500)
+            }
+            return
+          }
+        }
+      }
+    },100)
+    const bookMatch = fullAiText.match(/\[TICKET_BOOK:([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^\]]+)\]/)
+    if (bookMatch) {
+      messages[msgIndex].displayContent = fullAiText.replace(/\[TICKET_BOOK:[^\]]+\]/, '').trim()
+      messages[msgIndex].bookInfo = {
+        trainId: bookMatch[1],
+        trainNumber: bookMatch[2],
+        departure: bookMatch[3],
+        arrival: bookMatch[4],
+        departureDate: bookMatch[5],
+        seatType: bookMatch[6]
+      }
+      scrollToBottom()
+    }
+
   } catch (e) {
     console.error('AI 请求异常:', e)
-    const detail = e.response?.data?.message || e.message || '未知错误'
     const msgIndex = messages.length
-    messages.push({role: 'ai', content: '请求失败: ' + detail, displayContent: '', typing: false})
-    typewriterEffect(msgIndex, '请求失败: ' + detail)
+    messages.push({role: 'ai', content: '服务异常', displayContent: '抱歉，网络连接断开或服务不可用。', typing: false})
   } finally {
-    // 关键修复：确保任何情况下请求结束后都重置状态
     loading.value = false
   }
 }

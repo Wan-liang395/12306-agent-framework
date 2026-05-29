@@ -55,7 +55,7 @@ public String queryTicket(QueryTicketReq req) {
         log.info("🎫 [queryTicket] API返回: success={}", result.isSuccess());
 
         if (result.isSuccess() && result.getData() != null) {
-            JSONObject raw = JSON.parseObject(JSON.toJSONString(result.getData()));
+            JSONObject raw = JSONObject.from(result.getData());
             JSONArray trains = raw.getJSONArray("trainList");
 
             if (trains == null || trains.isEmpty()) {

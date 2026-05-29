@@ -59,7 +59,15 @@ public class TicketBookingTool {
 
             @JsonProperty(required = true)
             @JsonPropertyDescription("席别，例如：二等座、一等座、商务座")
-            String seatType
+            String seatType,
+
+            @JsonProperty(required = true)
+            @JsonPropertyDescription("当前操作的登录账号(username)，必须从系统上下文中直接提取透传，绝对不能乱编")
+            String username,
+
+            @JsonProperty(required = true)
+            @JsonPropertyDescription("当前操作的登录账号的userId，必须从系统上下文中提取透传，绝对不能乱编")
+            String userId
     ) {}
 
     @Tool(description = "预订/购买火车票的核心工具。工作流强约束：\n" +
@@ -72,6 +80,8 @@ public class TicketBookingTool {
         String arrival = req.arrival();
         String passengerName = req.passengerName();
         String seatType = req.seatType();
+        String reqUsername = req.username();
+        String reqUserId = req.userId();
 
         // 1：参数格式异常，打回让大模型重做
         if (trainId == null || !trainId.matches("^\\d+$")) {
@@ -79,21 +89,24 @@ public class TicketBookingTool {
             // 这里返回的不是给用户的报错，而是给大模型的指令！
             return "执行失败：你传入的 trainId (" + trainId + ") 格式不正确，必须是纯数字！请反思并在后台自动提取正确的数字重新调用本工具，不要把这个错误直接告诉用户。";
         }
+        if (reqUsername == null || reqUsername.isEmpty() || "未登录".equals(reqUsername)) {
+            return "执行失败：无法获取当前用户信息。请提示用户：‘请先在前端完成登录，再进行购票。’";
+        }
 
         log.info("🚀 [Agent 动作] 正在下单。trainId: {}, {}→{}, 乘客: {}, 席别: {}", trainId, departure, arrival, passengerName, seatType);
 
         try {
+            AgentRequestContext.setUsername(reqUsername);
+            AgentRequestContext.setUserId(reqUserId);
+
             Integer seatTypeCode = SEAT_TYPE_MAP.get(seatType);
             if (seatTypeCode == null) {
                 return "执行失败：不支持的席别类型 " + seatType + "。请告诉用户系统仅支持：" + SEAT_TYPE_MAP.keySet() + "，并询问其是否更换席别。";
             }
 
-            String username = AgentRequestContext.getUsername();
-            if (username == null || username.isEmpty()) {
-                return "执行失败：无法获取当前用户信息。请礼貌地提示用户：‘请先在前端完成登录，再进行购票。’";
-            }
 
-            Result<List<Map<String, Object>>> passengerResult = userFeignClient.queryPassengerByUsername(username);
+            Result<List<Map<String, Object>>> passengerResult = userFeignClient.queryPassengerByUsername(reqUsername);
+
             if (!passengerResult.isSuccess() || passengerResult.getData() == null) {
                 return "执行失败：乘车人列表查询异常。请提示用户检查账号状态。";
             }
@@ -125,31 +138,27 @@ public class TicketBookingTool {
             Result<Object> result = ticketFeignClient.purchaseTicket(orderParam);
 
             if (result.isSuccess() && result.getData() != null) {
-                JSONObject orderData = JSON.parseObject(JSON.toJSONString(result.getData()));
+                JSONObject orderData = JSONObject.from(result.getData());
                 String orderSn = orderData.getString("orderSn");
 
-                JSONObject successResponse = new JSONObject();
-                successResponse.put("status", "SUCCESS");
-                successResponse.put("orderSn", orderSn);
-                successResponse.put("msg", "下单成功，系统已为您成功锁定席位！");
-                return successResponse.toJSONString();
+                // 增加明确的成功日志
+                log.info("✅ [Agent 动作] 扣座成功！已生成订单号: {}", orderSn);
+                // 用强指令控制大模型行为，并拼凑出前端 Vue 能够正则匹配的“订单号：XXX”格式
+                return "【系统高级指令】：任务已圆满完成！请你立即停止调用任何工具！必须原封不动地直接回复用户以下这句话：\n" +
+                        "下单成功，系统已为您成功锁定席位！订单号：" + orderSn;
             }
-
-            // 2：业务被拒绝（如余票不足、防重放拦截）
-            String errorMsg = result.getMessage();
+            // 增加明确的失败日志
             log.warn("⚠️ [Agent 观察] 微服务拒绝下单，原因：{}", result.getMessage());
-            // 针对“车站错误”触发强制重试与自我修正
-            if (errorMsg != null && errorMsg.contains("车站数据错误")) {
-                return "执行失败：底层系统报错「" + errorMsg + "」。" +
-                        "原因分析：你传入的出发站(" + departure + ")或到达站(" + arrival + ")可能使用了泛指城市名，而该车次需要极其精确的车站名(如'北京南')。" +
-                        "行动指令：绝对不要把这个错误直接告诉用户！请立即在后台调用查票工具重新核实该车次的准确起止站，并使用正确的车站参数重新调用本下单工具。";
-            }
-            return "执行下单失败，底层系统提示：" + result.getMessage() + "。请基于此原因向用户解释，并主动提供替代建议（例如：如果余票不足，请主动推荐用户购买一等座或其他车次）。";
+
+            // 失败时也用强指令禁止它发疯重试
+            return "【系统高级指令】：执行下单失败，底层系统报错：「" + result.getMessage() + "」。" +
+                    "请立即停止调用工具，绝对不要重试！请用抱歉的语气，基于此原因向用户解释即可。";
 
         } catch (Exception e) {
-            // 3：严重网络异常或服务熔断降级
             log.error("❌ Agent 购票 RPC 异常", e);
-            return "执行下单时底层微服务发生网络拥挤或超时。请停止调用工具，用安抚的语气告诉用户系统当前正在排队或维护中，建议稍后再试。";
+            return "【系统高级指令】：底层微服务发生网络异常。请立即停止调用工具，并告诉用户系统拥挤请稍后再试。";
+        } finally {
+            AgentRequestContext.clear();
         }
     }
 }
