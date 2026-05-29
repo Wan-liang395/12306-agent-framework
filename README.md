@@ -5,7 +5,7 @@
 [![Spring AI](https://img.shields.io/badge/Spring%20AI-Alibaba-blue.svg)](https://github.com/alibaba/spring-ai-alibaba)
 [![Vue](https://img.shields.io/badge/Vue-3.x-green.svg)](https://vuejs.org/)
 
-本工程是一款基于基于真实大高并发微服务底座（马丁12306 票务系统）构建的**企业级 Java 智能出行 Agent 架构系统**。底层基于 Java Spring Cloud 微服务基座，AI 大脑层全面拥抱 `Spring AI Alibaba` 生态，深度集成大模型 Function Calling 机制，完整打通了从用户自然语言意图识别、智能多步规划，到分布式微服务接口安全调用的全链路闭环。
+本工程是一款基于真实大高并发微服务底座（马丁12306 票务系统）构建的**企业级 Java 智能出行 Agent 架构系统**。底层基于 Java Spring Cloud 微服务基座，AI 大脑层全面拥抱 `Spring AI Alibaba` 生态，深度集成大模型 Function Calling 机制，完整打通了从用户自然语言意图识别、智能多步规划，到分布式微服务接口安全调用的全链路闭环。
 
 ---
 ## 🛠️ 技术栈 (Tech Stack)
